@@ -36,12 +36,14 @@ echo_green "Install Input Shaper requirements ..."
 apt update
 
 # libatlas-base-dev was merged into libopenblas-dev on Debian Trixie and is
-# no longer a separate package there - drop it from the list if apt doesn't
-# know about it, and pull in libopenblas-dev instead so numpy/matplotlib
-# still get a BLAS backend.
+# no longer installable there - but apt-cache still has stale metadata for
+# it (Candidate: (none)), so neither `apt-cache show` nor common.sh's
+# is_in_apt (which just checks apt-cache policy prints *any* output) can
+# tell it apart from a real package. Use --simulate instead, which runs
+# apt's actual candidate resolution - the same check that fails for real.
 DEPS="${IS_REQ_PREINSTALL_DEPS}"
-if ! apt-cache show libatlas-base-dev &> /dev/null; then
-    echo_green "libatlas-base-dev not available (Trixie+), substituting libopenblas-dev ..."
+if ! apt-get install --simulate --yes libatlas-base-dev &> /dev/null; then
+    echo_green "libatlas-base-dev not installable (Trixie+), substituting libopenblas-dev ..."
     DEPS="${DEPS//libatlas-base-dev/} libopenblas-dev"
 fi
 
