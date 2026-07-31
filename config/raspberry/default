@@ -5,12 +5,19 @@ BASE_IMAGE_ENLARGEROOT=10500
 BASE_IMAGE_RESIZEROOT=600
 # Compress not needed due compression done in workflow
 BASE_RELEASE_COMPRESS=no
+# Current kernel packages' postinst (update-initramfs, MODULES=dep) require
+# /proc and /sys to be mounted in the chroot, or dpkg configure fails with
+# "mkinitramfs: MODULES dep requires mounted sysfs on /sys".
+MOUNT_PROC=1
+MOUNT_SYS=1
 # Modules are valid for 32bit and 64bit images
 MODULES="base,pkgupgrade,udev_fix,network,piconfig,klipper,node,is_req_preinstall,moonraker,ratos(mainsail,crowsnest,linear_movement_analysis,timelapse,klipperscreen,rpi_mcu,disable-services(hotspot),dfu-util),password-for-sudo,postrename"
 # export Variables
 export BASE_IMAGE_ENLARGEROOT
 export BASE_IMAGE_RESIZEROOT
 export BASE_RELEASE_COMPRESS
+export MOUNT_PROC
+export MOUNT_SYS
 export MODULES
 
 export RPI_IMAGER_NAME="${DIST_NAME}"
