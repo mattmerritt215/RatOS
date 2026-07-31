@@ -34,10 +34,21 @@ echo_green "Install Input Shaper requirements ..."
 ## APT: Update Repo Database and install Dependencies
 # Force apt update
 apt update
+
+# libatlas-base-dev was merged into libopenblas-dev on Debian Trixie and is
+# no longer a separate package there - drop it from the list if apt doesn't
+# know about it, and pull in libopenblas-dev instead so numpy/matplotlib
+# still get a BLAS backend.
+DEPS="${IS_REQ_PREINSTALL_DEPS}"
+if ! apt-cache show libatlas-base-dev &> /dev/null; then
+    echo_green "libatlas-base-dev not available (Trixie+), substituting libopenblas-dev ..."
+    DEPS="${DEPS//libatlas-base-dev/} libopenblas-dev"
+fi
+
 echo_green "Installing Input Shaper Dependencies ..."
 # shellcheck disable=SC2086
 # Disabling shellcheck SC2086, because we want "wordsplitting"
-check_install_pkgs ${IS_REQ_PREINSTALL_DEPS}
+check_install_pkgs ${DEPS}
 
 ### Check for Klipper Venv installed.
 pushd "/home/${BASE_USER}" &> /dev/null || exit 1
