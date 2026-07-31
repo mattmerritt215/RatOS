@@ -48,7 +48,10 @@ jobs:
 
   build:
     needs: setup
-    runs-on: ubuntu-latest
+    # Native arm64 runner - the chroot build otherwise runs under QEMU
+    # emulation on x86_64, which is known to fail configuring kernel
+    # packages (e.g. linux-image-rpi-2712 postinst/depmod) reliably.
+    runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
       matrix:
