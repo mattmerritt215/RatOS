@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Work around Debian Trixie's initramfs-tools requiring /sys to be mounted
+# for MODULES=dep module-dependency resolution.
+#
+# The CustomPiOS chroot (custompios-ref 1.5.0, see common.sh) bind-mounts
+# /dev, /dev/pts and /proc, but never mounts /sys, and has no config knob
+# to do so. Without it, any kernel package's postinst (update-initramfs)
+# fails outright:
+#   mkinitramfs: MODULES dep requires mounted sysfs on /sys
+#   update-initramfs: failed for /boot/initrd.img-... with 1.
+# which then cascades into dpkg leaving linux-image-rpi-v8/rpi-2712
+# unconfigured. Switching to MODULES=most avoids the sysfs-dependent
+# probing entirely. Must run before pkgupgrade, which is what actually
+# pulls in/upgrades the kernel packages that trigger this.
+########
+
+set -Eex
+
+# Source CustomPIOS common.sh
+# shellcheck disable=SC1091
+source /common.sh
+install_cleanup_trap
+
+echo_green "Setting initramfs-tools MODULES=most (avoids /sys dependency) ..."
+sed -i 's/^MODULES=.*/MODULES=most/' /etc/initramfs-tools/initramfs.conf

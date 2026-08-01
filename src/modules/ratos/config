@@ -15,8 +15,13 @@
 [ -n "$RATOS_CONFIG_BRANCH" ] || RATOS_CONFIG_BRANCH=v2.1.x
 [ -n "$RATOS_THEME_SHIP" ] || RATOS_THEME_SHIP=https://github.com/Rat-OS/RatOS-theme.git
 [ -n "$RATOS_THEME_BRANCH" ] || RATOS_THEME_BRANCH=v2.1.x
-[ -n "$RATOS_CONFIGURATOR_SHIP" ] || RATOS_CONFIGURATOR_SHIP=https://github.com/Rat-OS/RatOS-configurator.git
-[ -n "$RATOS_CONFIGURATOR_BRANCH" ] || RATOS_CONFIGURATOR_BRANCH=v2.1.x-deployment
+# Temporarily pointed at a fork carrying the NetworkManager-based WiFi-join
+# rewrite (add-wifi-network.sh used wpa_supplicant/wpa_cli directly, which
+# doesn't work under current Raspberry Pi OS's default NetworkManager
+# stack - same root cause as the hotspot module rewrite in this repo).
+# Revert to Rat-OS/RatOS-configurator once that fix is merged upstream.
+[ -n "$RATOS_CONFIGURATOR_SHIP" ] || RATOS_CONFIGURATOR_SHIP=https://github.com/mattmerritt215/RatOS-configurator.git
+[ -n "$RATOS_CONFIGURATOR_BRANCH" ] || RATOS_CONFIGURATOR_BRANCH=fix/networkmanager-wifi
 
 #### NOTE:
 #### python3-serial is a klipper requirement

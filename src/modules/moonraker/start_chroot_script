@@ -63,6 +63,16 @@ check_install_pkgs ${MOONRAKER_DEPS}
 ## Step 7: Move to moonraker as working directory
 pushd "/home/${BASE_USER}/moonraker" &> /dev/null || exit 1
 
+## Step 7.5: Pre-create the venv with an up-to-date pip/setuptools/wheel.
+## install-moonraker.sh's create_virtualenv() only runs `virtualenv` if
+## the venv directory doesn't already exist, so pre-creating it here lets
+## it reuse ours. Without this, virtualenv's bundled pip==20.3.4 hits a
+## resolver bug (KeyError on a MarkupSafe/markupsafe casing mismatch)
+## against current PyPI/piwheels package metadata.
+echo_green "Pre-creating Moonraker venv with an up-to-date pip ..."
+sudo -u "${BASE_USER}" virtualenv -p python3 "/home/${BASE_USER}/moonraker-env"
+sudo -u "${BASE_USER}" "/home/${BASE_USER}/moonraker-env/bin/pip" install --upgrade pip setuptools wheel
+
 ## Step 8: Run moonraker install routine
 echo_green "Launch moonraker install routine ..."
 sudo -u "${BASE_USER}" ./scripts/install-moonraker.sh -z -x

@@ -70,11 +70,19 @@ check_install_pkgs ${RATOS_DEPS}
 
 
 # Install RatOS Configurator
-sudo -u "${BASE_USER}" bash /home/"${BASE_USER}"/ratos-configurator/scripts/setup.sh
+# RatOS-configurator restructured into app/+configuration/ subdirectories;
+# scripts/setup.sh moved to app/scripts/setup.sh.
+#
+# Work around a bug in that script's install_cli(): it unconditionally
+# runs `rm "$target"` (no -f) on /usr/local/bin/ratos, which fails on a
+# fresh image where that file doesn't exist yet. Pre-create it so the rm
+# succeeds and install_cli() can replace it with the real symlink.
+touch /usr/local/bin/ratos
+sudo -u "${BASE_USER}" bash /home/"${BASE_USER}"/ratos-configurator/app/scripts/setup.sh
 
 # Start the configurator so extensions can access the API
 echo "Starting RatOS Configurator"
-pushd "/home/${BASE_USER}/ratos-configurator"
+pushd "/home/${BASE_USER}/ratos-configurator/app"
 sudo -u "${BASE_USER}" npm run start &
 # Wait for configurator to start
 # shellcheck disable=SC2016
@@ -86,6 +94,17 @@ echo $PATH
 ls -la /usr/local/bin
 
 # Install RatOS Configuration
+# Work around a path bug in ratos-install.sh: install_printer_config() and
+# install_udev_rules() both reference "$SCRIPT_DIR"/templates and
+# "$SCRIPT_DIR"/boards (SCRIPT_DIR being .../configuration/scripts), but
+# those directories actually live one level up, as siblings of scripts/,
+# not inside it. printer_data/config/RatOS is a symlink into
+# ratos-configurator/configuration by this point (setup.sh's
+# symlink_configuration), so patch the real target directly.
+RATOS_CONFIGURATOR_SCRIPTS_DIR="/home/${BASE_USER}/ratos-configurator/configuration/scripts"
+ln -sf ../templates "${RATOS_CONFIGURATOR_SCRIPTS_DIR}/templates"
+ln -sf ../boards "${RATOS_CONFIGURATOR_SCRIPTS_DIR}/boards"
+
 sudo -u "${BASE_USER}" /home/"${BASE_USER}"/printer_data/config/RatOS/scripts/ratos-install.sh
 
 # Create variant file

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# disable-services
+# A wrapper that makes any module running inside it not start services once then are installed
+# Written by Guy Sheffer <guysoft at gmail dot com> and Gina Häußge <osd@foosel.net>
+# GPL V3
+########
+#
+# RatOS override of CustomPiOS' built-in disable-services module (module
+# resolution prefers repository/src/modules/<name> over
+# CustomPiOS/src/modules/<name> - see execution_order.py).
+#
+# The only change from upstream: policykit-1 was renamed to polkitd in
+# Debian Trixie, and apt still has stale metadata for the old name there
+# (Candidate: (none)), so the upstream is_in_apt check false-positives on
+# it the same way it did for libatlas-base-dev - substitute polkitd when
+# policykit-1 isn't actually installable.
+########
+set -ex
+
+source /common.sh
+install_cleanup_trap
+
+apt-get update --allow-releaseinfo-change --allow-releaseinfo-change
+if apt-get install --simulate --yes policykit-1 &> /dev/null; then
+  sudo apt-get -y install policykit-1
+elif apt-get install --simulate --yes polkitd &> /dev/null; then
+  sudo apt-get -y install polkitd
+fi
+
+# prevent any installed services from automatically starting
+echo exit 101 > /usr/sbin/policy-rc.d
+chmod +x /usr/sbin/policy-rc.d
