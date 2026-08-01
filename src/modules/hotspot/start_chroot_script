@@ -2,82 +2,35 @@
 set -x
 set -e
 # CustomPiOS auto-hotspot module
-# Script sets up an automatic hotspot if no wifi is found
-# Based on http://www.raspberryconnect.com/network/item/330-raspberry-pi-auto-wifi-hotspot-switch-internet
-# Written by Guy Sheffer <guysoft at gmail dot com>
-# GPL V3
+# Sets up an automatic fallback WiFi hotspot for first-time setup, using a
+# NetworkManager AP connection profile instead of the old hostapd/dnsmasq/
+# wpa_supplicant stack (RatOS's build already runs NetworkManager - see
+# CustomPiOS's own network module default of NETWORK_NETWORK_MANAGER=yes -
+# and the old stack fights it rather than working alongside it).
+#
+# NetworkManager's ipv4.method=shared on an AP-mode profile provides its
+# own DHCP server and NAT, so hostapd/dnsmasq/iptables aren't needed at
+# all. The fallback behavior (only broadcast the hotspot when no known
+# WiFi network is reachable) comes from autoconnect-priority=-999 on the
+# profile itself: NetworkManager always tries higher-priority (real,
+# user-added) connections first and only falls through to this profile
+# when none of them can activate - no custom polling/switching script
+# required.
 ########
 
 source /common.sh
 
-apt-get update --allow-releaseinfo-change
-apt-get -y purge dns-root-data
-apt-get -y install iw
-
-apt-get purge dns-root-data
-apt-get install -y hostapd dnsmasq iptables
-
-systemctl disable hostapd
-systemctl disable dnsmasq
-
-# Unpack after hostapd dnsmasq so we can overwrite their config if needed
+# Unpack the AP connection profile (and anything else under filesystem/root)
 unpack /filesystem/root /
 
-# Set hotspot name and password
-sed -i s"/HOTSPOT_NAME/$HOTSPOT_NAME/g" /etc/hostapd/hostapd.conf
-sed -i s"/HOTSPOT_PASSWORD/$HOTSPOT_PASSWORD/g" /etc/hostapd/hostapd.conf
-sed -i s"/HOTSPOT_CHANNEL/$HOTSPOT_CHANNEL/g" /etc/hostapd/hostapd.conf
+# Set hotspot name, password and channel
+sed -i s"/HOTSPOT_NAME/$HOTSPOT_NAME/g" /etc/NetworkManager/system-connections/ratos-hotspot.nmconnection
+sed -i s"/HOTSPOT_PASSWORD/$HOTSPOT_PASSWORD/g" /etc/NetworkManager/system-connections/ratos-hotspot.nmconnection
+sed -i s"/HOTSPOT_CHANNEL/$HOTSPOT_CHANNEL/g" /etc/NetworkManager/system-connections/ratos-hotspot.nmconnection
 
-if grep -Fxq "DAEMON_CONF" /etc/default/hostapd
-then
-    sed -i "s@#DAEMON_CONF=\"\"@DAEMON_CONF=\"/etc/hostapd/hostapd.conf\"@g" /etc/default/hostapd
-else
-    echo DAEMON_CONF=\"/etc/hostapd/hostapd.conf\" >> /etc/default/hostapd
-fi
-
-sed -i "s@^DAEMON_OPTS=\"\"@^#DAEMON_OPTS=\"\"@g" /etc/default/hostapd
-
-# echo "
-# # IPv6
-# duid
-# interface eth0
-#         ipv6rs
-#         iaid 1
-#         ia_pd 2 wlan0/1/64 # request prefixes for VLANs
-# " >> /etc/dhcpcd.conf
-
-if [ -f /etc/dhcpcd.conf ]; then
-  sed -i 's/clientid/# clientid/g' /etc/dhcpcd.conf
-fi
-
-echo "
-# Auto-hotspot Config
-# Interface to use
-interface=wlan0
-bind-interfaces
-dhcp-range=192.168.50.150,192.168.50.200,255.255.255.0,12h
-
-" >> /etc/dnsmasq.conf
-
-# Don't forward traffic between interfaces (no internet connection forwarding over hotspot)
-# sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/g' /etc/sysctl.conf
-# Current Raspberry Pi OS images don't ship /etc/sysctl.conf at all (config
-# lives under /etc/sysctl.d/ drop-ins instead) - nothing to disable if it's
-# not there, ip_forward is already off by default.
-if [ -f /etc/sysctl.conf ]; then
-    sed -i 's/net.ipv4.ip_forward=1/#net.ipv4.ip_forward=1/g' /etc/sysctl.conf
-fi
-
-# Current Raspberry Pi OS images default to NetworkManager and don't ship
-# /etc/network/interfaces at all - nothing to back up/blank in that case.
-if [ -f /etc/network/interfaces ]; then
-    cp /etc/network/interfaces /etc/network/interfaces-backup
-    echo "" > /etc/network/interfaces
-fi
-
-# Add cronjob
-# echo "* * * * * /usr/bin/autohotspotN" | crontab -
-
-systemctl enable autohotspot.service
-
-
+# NetworkManager refuses to load connection profiles containing secrets
+# (psk=) unless they're owned by root and not readable by group/other.
+# unpack preserves the mode git tracked, which for a non-executable file
+# is 644, not 600 - fix it explicitly.
+chown root:root /etc/NetworkManager/system-connections/ratos-hotspot.nmconnection
+chmod 600 /etc/NetworkManager/system-connections/ratos-hotspot.nmconnection
