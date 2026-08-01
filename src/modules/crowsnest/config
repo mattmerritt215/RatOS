@@ -27,8 +27,14 @@
 [[ -n "$CROWSNEST_USTREAMER_REPO_BRANCH" ]] || CROWSNEST_USTREAMER_REPO_BRANCH="master"
 
 # camera-streamer
-[[ -n "$CROWSNEST_CAMERA_STREAMER_REPO_SHIP" ]] || CROWSNEST_CAMERA_STREAMER_REPO_SHIP="https://github.com/ayufan/camera-streamer.git"
-[[ -n "$CROWSNEST_CAMERA_STREAMER_REPO_BRANCH" ]] || CROWSNEST_CAMERA_STREAMER_REPO_BRANCH="master"
+# ayufan/camera-streamer (master) doesn't build against current Trixie's
+# FFmpeg - avio_alloc_context()'s write_packet callback gained a `const`
+# qualifier upstream that ayufan's fork never picked up, so it fails under
+# -Werror. crowsnest's own bin/build.sh has since moved its default to
+# mryel00/camera-streamer (maintained by a crowsnest co-author, kept in
+# sync with current Raspberry Pi OS) - use that instead of overriding it.
+[[ -n "$CROWSNEST_CAMERA_STREAMER_REPO_SHIP" ]] || CROWSNEST_CAMERA_STREAMER_REPO_SHIP="https://github.com/mryel00/camera-streamer.git"
+[[ -n "$CROWSNEST_CAMERA_STREAMER_REPO_BRANCH" ]] || CROWSNEST_CAMERA_STREAMER_REPO_BRANCH="main"
 
 ###########################################################################
 ### DO NOT EDIT BELOW THIS LINE, UNLESS YOU KNOW EXACTLY WHAT HAPPENDS! ###
