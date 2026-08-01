@@ -72,6 +72,12 @@ check_install_pkgs ${RATOS_DEPS}
 # Install RatOS Configurator
 # RatOS-configurator restructured into app/+configuration/ subdirectories;
 # scripts/setup.sh moved to app/scripts/setup.sh.
+#
+# Work around a bug in that script's install_cli(): it unconditionally
+# runs `rm "$target"` (no -f) on /usr/local/bin/ratos, which fails on a
+# fresh image where that file doesn't exist yet. Pre-create it so the rm
+# succeeds and install_cli() can replace it with the real symlink.
+touch /usr/local/bin/ratos
 sudo -u "${BASE_USER}" bash /home/"${BASE_USER}"/ratos-configurator/app/scripts/setup.sh
 
 # Start the configurator so extensions can access the API
