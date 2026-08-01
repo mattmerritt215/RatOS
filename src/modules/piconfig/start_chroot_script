@@ -139,3 +139,18 @@ if [ -f /usr/lib/raspberrypi-sys-mods/imager_custom ]; then
 else
     systemctl_if_exists enable ssh
 fi
+
+# Step 15: Enable passwordless sudo for the build. Bullseye's base image
+# shipped this by default; Trixie+ does not, and several later modules
+# (e.g. Moonraker's own install script) run `sudo` as ${BASE_USER} and
+# fail outright without it ("sudo: a password is required"). The
+# password-for-sudo module reverts this again at the end of the build -
+# it targets /etc/sudoers.d/010_pi-nopasswd specifically, so this has to
+# create that exact file for the revert to find.
+RASPI_CONFIG="$(command -v raspi-config || true)"
+if [ -n "${RASPI_CONFIG}" ] && grep -q "^do_sudo_pass" "${RASPI_CONFIG}"; then
+    SUDO_USER="${BASE_USER}" raspi-config nonint do_sudo_pass 1
+elif [ ! -f "/etc/sudoers.d/010_${BASE_USER}-nopasswd" ]; then
+    echo "${BASE_USER} ALL=(ALL) NOPASSWD: ALL" > "/etc/sudoers.d/010_${BASE_USER}-nopasswd"
+    chmod 440 "/etc/sudoers.d/010_${BASE_USER}-nopasswd"
+fi
